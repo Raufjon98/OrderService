@@ -1,10 +1,12 @@
 using CatalogService.Contracts.Food.Requests;
 using CatalogService.Contracts.Interfaces;
+using MassTransit;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using OrderService.Api.Domain.Entities;
 using OrderService.Api.Features.Common.Exceptions;
 using OrderService.Api.Infrastructure.Data;
+using OrderService.Contracts.Cart.Events;
 using OrderService.Contracts.Cart.Requests;
 using OrderService.Contracts.Cart.Responses;
 using OrderService.Contracts.CartItem.Responses;
@@ -17,53 +19,79 @@ public class RemoveFromCartCommandHandler : IRequestHandler<RemoveItemFromCartCo
 {
     private readonly OrderDbContext _context;
     private readonly IFoodService _foodService;
+    private readonly IPublishEndpoint _publishEndpoint;
 
     public RemoveFromCartCommandHandler(OrderDbContext context,
-        IFoodService foodService)
+        IFoodService foodService, IPublishEndpoint publishEndpoint)
     {
         _context = context;
         _foodService = foodService;
+        _publishEndpoint = publishEndpoint;
     }
+
     public async Task<CartResponse> Handle(RemoveItemFromCartCommand request, CancellationToken cancellationToken)
     {
         var cart = await _context.Carts
             .Include(c => c.Items)
             .FirstOrDefaultAsync(c => c.CustomerId == request.CustomerId
-                && c.IsDeleted == false, cancellationToken);
+                                      && c.IsDeleted == false, cancellationToken);
         if (cart is null)
         {
-          throw new NotFoundException(nameof(Cart), request.CustomerId.ToString());
+            throw new NotFoundException(nameof(Cart), request.CustomerId.ToString());
         }
 
         var updateFoodStock = new List<FoodStockRequest>();
 
+        var cartUpdateEvent = new CartUpdatedEvent
+        {
+            Id = cart.Id,
+            UpdatedOnUtc = DateTime.UtcNow,
+            Source = "RemoveItems"
+        };
+
         foreach (var cartItem in request.CartItems.Items)
         {
-            var item = cart.Items.FirstOrDefault(c=>c.FoodId == cartItem.FoodId);
+            var item = cart.Items.FirstOrDefault(c => c.FoodId == cartItem.FoodId);
             if (item is null)
             {
                 throw new Exception($"You do not have item {cartItem.FoodId} for this cart!");
             }
-            
+
             if (item.Quantity < cartItem.Quantity)
             {
                 throw new Exception("not enough quantity in cart!");
             }
-        
+
             if (item.Quantity == cartItem.Quantity)
             {
                 cart.Items.Remove(item);
             }
-        
+
             item.Quantity -= cartItem.Quantity;
+            cartUpdateEvent.FoodIds.Add(cartItem.FoodId);
+                        
+            updateFoodStock.Add(new  FoodStockRequest
+            {
+                FoodId = cartItem.FoodId,
+                Quantity = cartItem.Quantity
+            });
         }
-        
+
         await _foodService.IncreaseFoodStockAsync(updateFoodStock);
-        
+        await _publishEndpoint.Publish(cartUpdateEvent, cancellationToken);
+
         if (!cart.Items.Any())
         {
             cart.IsDeleted = true;
+            await _publishEndpoint.Publish(
+                new CartRemovedEvent
+                {
+                    Id = cart.Id,
+                    RemovedOnUtc = DateTime.UtcNow
+                },
+                cancellationToken);
         }
+
         await _context.SaveChangesAsync(cancellationToken);
 
         return new CartResponse

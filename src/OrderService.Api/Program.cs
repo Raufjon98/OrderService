@@ -1,6 +1,7 @@
 using System.Reflection;
 using CatalogService.Contracts.Extensions;
 using CustomerService.Contracts.Extensions;
+using MassTransit;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.EntityFrameworkCore;
 using OrderService.Api.Infrastructure.Data;
@@ -8,6 +9,7 @@ using OrderService.Api.Infrastructure.Interceptors;
 using OrderService.Api.MagicOnion.Services;
 using OrderService.Contracts.Interfaces;
 using PaymentService.Contracts.Extentions;
+using RabbitMQ.Client;
 
 var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -20,6 +22,18 @@ builder.WebHost.ConfigureKestrel(options =>
         listenOptions.Protocols = HttpProtocols.Http2;
     });
 });
+var rabbitConnectionString = builder.Configuration["MessageBroker:Host"];
+
+builder.Services.AddMassTransit(configuration =>
+{
+    configuration.UsingRabbitMq((ctx, cfg) =>
+    {
+        cfg.Host(rabbitConnectionString);
+        cfg.ExchangeType = ExchangeType.Fanout;
+        cfg.ConfigureEndpoints(ctx);
+    });
+});
+
 builder.Services.AddOpenApi();
 builder.Services.AddDbContext<OrderDbContext>(options => options.UseNpgsql(connectionString));
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));

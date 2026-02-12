@@ -1,11 +1,13 @@
 using CatalogService.Contracts.Food.Requests;
 using CatalogService.Contracts.Interfaces;
+using MassTransit;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using OrderService.Api.Domain.Constants;
 using OrderService.Api.Domain.Entities;
 using OrderService.Api.Features.Common.Exceptions;
 using OrderService.Api.Infrastructure.Data;
+using OrderService.Contracts.Order.Events;
 using OrderService.Contracts.Order.Requests;
 using OrderService.Contracts.Order.Responses;
 using OrderService.Contracts.OrderItem.Responses;
@@ -21,14 +23,16 @@ public class AddToOrderCommandHandler : IRequestHandler<AddToOrderCommand, Order
     private readonly OrderDbContext _context;
     private readonly IFoodService _foodService;
     private readonly IAccountService _accountService;
+    private readonly IPublishEndpoint _publishEndpoint;
 
     public AddToOrderCommandHandler(OrderDbContext context,
         IFoodService foodService,
-        IAccountService accountService)
+        IAccountService accountService, IPublishEndpoint publishEndpoint)
     {
         _context = context;
         _foodService = foodService;
         _accountService = accountService;
+        _publishEndpoint = publishEndpoint;
     }
 
     public async Task<OrderResponse> Handle(AddToOrderCommand request, CancellationToken cancellationToken)
@@ -63,6 +67,13 @@ public class AddToOrderCommandHandler : IRequestHandler<AddToOrderCommand, Order
             .ToList();
 
         decimal amount = 0;
+        var orderUpdatedEvent = new OrderUpdatedEvent
+        {
+            Id = order.Id,
+            UpdatedOnUtc = DateTime.UtcNow,
+            Source = "AddItemToOrder",
+            OrderStatus = order.Status,
+        };
 
         using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
         try
@@ -116,6 +127,7 @@ public class AddToOrderCommandHandler : IRequestHandler<AddToOrderCommand, Order
                     Quantity = newItem.Quantity
                 };
                 updateFoodsStock.Add(foodStockRequest);
+                orderUpdatedEvent.Items.Add(newItem.FoodId, newItem.Quantity);
             }
 
             await _accountService.WithdrawBalanceAsync(new WithdrawRequest
@@ -126,6 +138,7 @@ public class AddToOrderCommandHandler : IRequestHandler<AddToOrderCommand, Order
             });
             await _foodService.DecreaseFoodStockAsync(updateFoodsStock);
             await _context.SaveChangesAsync(cancellationToken);
+            await _publishEndpoint.Publish(orderUpdatedEvent, cancellationToken);
             await transaction.CommitAsync(cancellationToken);
         }
         catch 

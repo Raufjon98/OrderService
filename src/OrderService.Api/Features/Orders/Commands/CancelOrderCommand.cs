@@ -1,11 +1,13 @@
 using CatalogService.Contracts.Food.Requests;
 using CatalogService.Contracts.Interfaces;
+using MassTransit;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using OrderService.Api.Domain.Entities;
 using OrderService.Api.Features.Common.Exceptions;
 using OrderService.Api.Infrastructure.Data;
 using OrderService.Contracts.Enums;
+using OrderService.Contracts.Order.Events;
 using OrderService.Contracts.Order.Responses;
 using OrderService.Contracts.OrderItem.Responses;
 using PaymentService.Contracts.Account.Requests;
@@ -20,14 +22,16 @@ public class CancelOrderCommandHandler : IRequestHandler<CancelOrderCommand, Ord
     private readonly OrderDbContext _context;
     private readonly IAccountService _accountService;
     private readonly IFoodService _foodService;
+    private readonly IPublishEndpoint _publishEndpoint;
 
     public CancelOrderCommandHandler(OrderDbContext context,
         IAccountService accountService,
-        IFoodService foodService)
+        IFoodService foodService, IPublishEndpoint publishEndpoint)
     {
         _context = context;
         _accountService = accountService;
         _foodService = foodService;
+        _publishEndpoint = publishEndpoint;
     }
 
     public async Task<OrderResponse> Handle(CancelOrderCommand request, CancellationToken cancellationToken)
@@ -50,7 +54,18 @@ public class CancelOrderCommandHandler : IRequestHandler<CancelOrderCommand, Ord
                 }).ToList();
 
             await _foodService.IncreaseFoodStockAsync(updateFoodsStock);
-
+            
+            await _publishEndpoint.Publish(
+                new OrderUpdatedEvent()
+                {
+                    Id = order.Id,
+                    UpdatedOnUtc = DateTime.UtcNow,
+                    Items = order.Items.ToDictionary(i=>i.FoodId, i=>i.Quantity),
+                    Source = "CancelOrder",
+                    OrderStatus = order.Status
+                },
+                cancellationToken);
+            
             var refund = new TopUpRequest
             {
                 CustomerId = request.CustomerId,

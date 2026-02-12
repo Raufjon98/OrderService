@@ -1,11 +1,13 @@
 using CatalogService.Contracts.Food.Requests;
 using CatalogService.Contracts.Interfaces;
+using MassTransit;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using OrderService.Api.Domain.Constants;
 using OrderService.Api.Domain.Entities;
 using OrderService.Api.Features.Common.Exceptions;
 using OrderService.Api.Infrastructure.Data;
+using OrderService.Contracts.Cart.Events;
 using OrderService.Contracts.Cart.Requests;
 using OrderService.Contracts.Cart.Responses;
 using OrderService.Contracts.CartItem.Responses;
@@ -18,12 +20,14 @@ public class AddItemToCartCommandHandler : IRequestHandler<AddItemToCartCommand,
 {
     private readonly OrderDbContext _context;
     private readonly IFoodService _foodService;
+    private readonly IPublishEndpoint _publishEndpoint;
 
     public AddItemToCartCommandHandler(OrderDbContext context,
-        IFoodService foodService)
+        IFoodService foodService, IPublishEndpoint publishEndpoint)
     {
         _context = context;
         _foodService = foodService;
+        _publishEndpoint = publishEndpoint;
     }
 
     public async Task<CartResponse> Handle(AddItemToCartCommand request, CancellationToken cancellationToken)
@@ -41,7 +45,7 @@ public class AddItemToCartCommandHandler : IRequestHandler<AddItemToCartCommand,
             .FirstOrDefaultAsync(cancellationToken);
 
         string? restaurantId = null;
-      
+
         using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
         try
         {
@@ -95,6 +99,14 @@ public class AddItemToCartCommandHandler : IRequestHandler<AddItemToCartCommand,
 
                 await _foodService.DecreaseFoodStockAsync(updateFoodStock);
                 await _context.Carts.AddAsync(cart, cancellationToken);
+                await _publishEndpoint.Publish(
+                    new CartCreatedEvent
+                    {
+                        Id = cartId,
+                        ItemsIds = cart.Items.Select(i => i.Id).ToArray(),
+                        CreatedOnUtc = DateTime.UtcNow
+                    },
+                    cancellationToken);
             }
             else
             {
@@ -105,8 +117,16 @@ public class AddItemToCartCommandHandler : IRequestHandler<AddItemToCartCommand,
                     {
                         throw new NotFoundException(FoodConstant.FoodName, cart.Items.First().FoodId);
                     }
+
                     restaurantId = existingFood.RestaurantId;
                 }
+
+                var cartUpdatedEvent = new CartUpdatedEvent
+                {
+                    Id = cart.Id,
+                    Source = "AddItemToCart",
+                    UpdatedOnUtc = DateTime.UtcNow
+                };
                 foreach (var item in request.CartItems.Items)
                 {
                     var food = await _foodService.GetFoodAsync(item.FoodId);
@@ -166,13 +186,16 @@ public class AddItemToCartCommandHandler : IRequestHandler<AddItemToCartCommand,
 
                         cart.Items.Add(cartItem);
                         await _context.CartItems.AddAsync(cartItem, cancellationToken);
+                        cartUpdatedEvent.FoodIds.Add(item.FoodId);
                     }
                 }
-
+               
+                await _publishEndpoint.Publish(cartUpdatedEvent, cancellationToken);
                 await _foodService.DecreaseFoodStockAsync(updateFoodStock);
             }
 
             await _context.SaveChangesAsync(cancellationToken);
+           
             await transaction.CommitAsync(cancellationToken);
         }
         catch (Exception e)

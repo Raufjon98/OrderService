@@ -1,7 +1,9 @@
+using MassTransit;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using OrderService.Api.Infrastructure.Data;
 using OrderService.Contracts.Enums;
+using OrderService.Contracts.Order.Events;
 using OrderService.Contracts.Order.Responses;
 using OrderService.Contracts.OrderItem.Responses;
 
@@ -12,10 +14,12 @@ public record StartPreparationCommand(Guid OrderId) : IRequest<OrderResponse>;
 public class StartPreparationCommandHandler : IRequestHandler<StartPreparationCommand, OrderResponse>
 {
     private readonly OrderDbContext _context;
+    private readonly IPublishEndpoint _publishEndpoint;
 
-    public StartPreparationCommandHandler(OrderDbContext context)
+    public StartPreparationCommandHandler(OrderDbContext context, IPublishEndpoint publishEndpoint)
     {
         _context = context;
+        _publishEndpoint = publishEndpoint;
     }
     public async Task<OrderResponse> Handle(StartPreparationCommand request, CancellationToken cancellationToken)
     {
@@ -30,6 +34,15 @@ public class StartPreparationCommandHandler : IRequestHandler<StartPreparationCo
         order.Status = OrderStatus.Preparing;
         order.ModifiedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync(cancellationToken);
+
+        await _publishEndpoint.Publish(
+            new OrderStatusChangedEvent
+            {
+                Id = order.Id,
+                Status = order.Status,
+                OrderStatusChangedOnUtc = DateTime.UtcNow
+            },
+            cancellationToken);
 
         return new OrderResponse
         {

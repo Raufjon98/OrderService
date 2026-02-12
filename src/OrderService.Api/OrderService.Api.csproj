@@ -10,6 +10,8 @@
     <PackageReference Include="CatalogService.Contracts" Version="1.0.6" />
     <PackageReference Include="CustomerService.Contracts" Version="1.0.2" />
     <PackageReference Include="MagicOnion.Server" Version="7.0.9" />
+    <PackageReference Include="MassTransit" Version="8" />
+    <PackageReference Include="MassTransit.RabbitMQ" Version="8" />
     <PackageReference Include="MediatR" Version="14.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.7" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
