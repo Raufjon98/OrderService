@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+      <IsPackable>True</IsPackable>
+      <Version>1.1.9</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Folder Include="Address\Requests\" />
+    <Folder Include="Address\Responses\" />
+    <Folder Include="Delivery\Requests\" />
+    <Folder Include="Delivery\Responses\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MagicOnion.Client" Version="7.0.9" />
+    <PackageReference Include="Microsoft.AspNetCore" Version="2.3.9" />
+    <PackageReference Include="UUID" Version="1.1.1" />
+  </ItemGroup>
+
+</Project>
