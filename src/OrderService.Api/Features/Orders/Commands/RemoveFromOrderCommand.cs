@@ -1,5 +1,6 @@
 using CatalogService.Contracts.Food.Requests;
 using CatalogService.Contracts.Interfaces;
+using MassTransit;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
@@ -8,6 +9,7 @@ using OrderService.Api.Features.Common.Exceptions;
 using OrderService.Api.Infrastructure.Data;
 using OrderService.Contracts.Enums;
 using OrderService.Contracts.Interfaces;
+using OrderService.Contracts.Order.Events;
 using OrderService.Contracts.Order.Requests;
 using OrderService.Contracts.Order.Responses;
 using OrderService.Contracts.OrderItem.Responses;
@@ -23,14 +25,16 @@ public class RemoveFromOrderCommandHandler : IRequestHandler<RemoveFromOrderComm
     private readonly IFoodService _foodService;
     private readonly OrderDbContext _context;
     private readonly IAccountService _accountService;
+    private readonly IPublishEndpoint _publishEndpoint;
 
     public RemoveFromOrderCommandHandler(IFoodService foodService,
         OrderDbContext context,
-        IAccountService accountService)
+        IAccountService accountService, IPublishEndpoint publishEndpoint)
     {
         _foodService = foodService;
         _context = context;
         _accountService = accountService;
+        _publishEndpoint = publishEndpoint;
     }
     
     public async Task<OrderResponse> Handle(RemoveFromOrderCommand request, CancellationToken cancellationToken)
@@ -39,6 +43,7 @@ public class RemoveFromOrderCommandHandler : IRequestHandler<RemoveFromOrderComm
             .Include(o=>o.Items)
             .Where(o => o.CustomerId == request.CustomerId && o.Id == request.RemoveFromOrderRequest.OrderId)
             .FirstOrDefaultAsync(cancellationToken);
+        
         if (order == null)
         {
             throw new NotFoundException(nameof(Order), request.RemoveFromOrderRequest.OrderId.ToString());
@@ -48,6 +53,14 @@ public class RemoveFromOrderCommandHandler : IRequestHandler<RemoveFromOrderComm
         {
             decimal amount = 0;
             var updateFoodsStock = new List<FoodStockRequest>();
+            
+            var orderUpdatedEvent = new OrderUpdatedEvent
+            {
+                Id = order.Id,
+                OrderStatus = order.Status,
+                Source = "RemoveFromOrder",
+                UpdatedOnUtc = DateTime.UtcNow,
+            };
 
             foreach (var item in  request.RemoveFromOrderRequest.Items)
             {
@@ -76,6 +89,7 @@ public class RemoveFromOrderCommandHandler : IRequestHandler<RemoveFromOrderComm
                 {
                     order.Items.Remove(existingItem);
                 }
+                orderUpdatedEvent.Items.Add(item.FoodId, item.Quantity);
             }
             
             var refund = new TopUpRequest
@@ -95,6 +109,7 @@ public class RemoveFromOrderCommandHandler : IRequestHandler<RemoveFromOrderComm
             
             await _foodService.IncreaseFoodStockAsync(updateFoodsStock);
             await _context.SaveChangesAsync(cancellationToken);
+            await _publishEndpoint.Publish(orderUpdatedEvent, cancellationToken);
         }
         else
         {

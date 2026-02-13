@@ -22,7 +22,7 @@ public class GetCartQueryHandler : IRequestHandler<GetCartQuery, CartResponse>
     public async Task<CartResponse> Handle(GetCartQuery request, CancellationToken cancellationToken)
     {
         var cart = await _context.Carts
-            .Where(c => c.CustomerId == request.CustomerId && c.IsDeleted == false)
+            .Where(c => c.CustomerId == request.CustomerId)
             .Select(c => new CartResponse
         {
             Id = c.Id,
