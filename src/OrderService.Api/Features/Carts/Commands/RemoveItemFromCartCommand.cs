@@ -33,8 +33,8 @@ public class RemoveFromCartCommandHandler : IRequestHandler<RemoveItemFromCartCo
     {
         var cart = await _context.Carts
             .Include(c => c.Items)
-            .FirstOrDefaultAsync(c => c.CustomerId == request.CustomerId
-                                      && c.IsDeleted == false, cancellationToken);
+            .FirstOrDefaultAsync(c => c.CustomerId == request.CustomerId, cancellationToken);
+        
         if (cart is null)
         {
             throw new NotFoundException(nameof(Cart), request.CustomerId.ToString());

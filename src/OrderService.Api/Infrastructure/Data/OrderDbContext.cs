@@ -16,8 +16,9 @@ public class OrderDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Order>(entity =>
-        {
+        {   
             entity.HasKey(o => o.Id);
+            entity.HasQueryFilter(o => !o.IsDeleted);
             entity.HasMany(o => o.Items)
                 .WithOne()
                 .HasForeignKey(ci => ci.OrderId)
@@ -27,6 +28,7 @@ public class OrderDbContext : DbContext
         modelBuilder.Entity<Cart>(entity =>
         {
             entity.HasKey(c=>c.Id);
+            entity.HasQueryFilter(o => !o.IsDeleted);
             entity.HasMany(c=>c.Items)
                 .WithOne(i=>i.Cart)
                 .HasForeignKey(ci => ci.CartId)
@@ -36,10 +38,23 @@ public class OrderDbContext : DbContext
         modelBuilder.Entity<Delivery>(entity =>
         {   
             entity.HasKey(d => d.Id);
+            entity.HasQueryFilter(o => !o.IsDeleted);
             entity.HasOne(d => d.Order)
                 .WithOne()
                 .HasForeignKey<Delivery>(d => d.OrderId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+        
+        modelBuilder.Entity<OrderItem>(entity =>
+        {   
+            entity.HasKey(o => o.Id);
+            entity.HasQueryFilter(o => !o.IsDeleted);
+        });
+        
+        modelBuilder.Entity<CartItem>(entity =>
+        {   
+            entity.HasKey(c => c.Id);
+            entity.HasQueryFilter(c => !c.IsDeleted);
         });
     }
 }

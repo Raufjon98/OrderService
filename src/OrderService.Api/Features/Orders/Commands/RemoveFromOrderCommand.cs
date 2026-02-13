@@ -43,6 +43,7 @@ public class RemoveFromOrderCommandHandler : IRequestHandler<RemoveFromOrderComm
             .Include(o=>o.Items)
             .Where(o => o.CustomerId == request.CustomerId && o.Id == request.RemoveFromOrderRequest.OrderId)
             .FirstOrDefaultAsync(cancellationToken);
+        
         if (order == null)
         {
             throw new NotFoundException(nameof(Order), request.RemoveFromOrderRequest.OrderId.ToString());

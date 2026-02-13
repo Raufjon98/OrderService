@@ -35,8 +35,7 @@ public class CreateCartCommandHandler : IRequestHandler<CreateCartCommand, CartR
     {
         var existingCart = await _context.Carts
             .Include(c => c.Items)
-            .Where(c => c.CustomerId == request.CustomerId && !c.IsDeleted)
-            .FirstOrDefaultAsync(cancellationToken);
+            .FirstOrDefaultAsync(c=>c.CustomerId == request.CustomerId, cancellationToken);
 
         if (existingCart != null)
         {

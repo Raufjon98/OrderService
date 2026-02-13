@@ -40,9 +40,9 @@ public class AddToOrderCommandHandler : IRequestHandler<AddToOrderCommand, Order
         var order = await _context.Orders
             .Include(o => o.Items)
             .Where(o => o.CustomerId == request.CustomerId
-                        && o.Id == request.AddToOrderRequest.OrderId
-                        && o.IsDeleted == false)
+                        && o.Id == request.AddToOrderRequest.OrderId)
             .FirstOrDefaultAsync(cancellationToken);
+        
         if (order == null)
         {   
             throw new NotFoundException(nameof(Order), request.AddToOrderRequest.OrderId.ToString());

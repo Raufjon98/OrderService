@@ -39,6 +39,7 @@ public class CreateOrderHandler : IRequestHandler<CreateOrderCommand, OrderRespo
         var cart = await _context.Carts
             .Include(c => c.Items)
             .FirstOrDefaultAsync(c => c.CustomerId == request.CustomerId, cancellationToken);
+        
         if (cart is null || !cart.Items.Any())
         {
             throw new Exception("Your cart is empty!");

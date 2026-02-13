@@ -56,7 +56,7 @@ public class CancelOrderCommandHandler : IRequestHandler<CancelOrderCommand, Ord
             await _foodService.IncreaseFoodStockAsync(updateFoodsStock);
             
             await _publishEndpoint.Publish(
-                new OrderUpdatedEvent()
+                new OrderUpdatedEvent
                 {
                     Id = order.Id,
                     UpdatedOnUtc = DateTime.UtcNow,

@@ -41,8 +41,7 @@ public class AddItemToCartCommandHandler : IRequestHandler<AddItemToCartCommand,
 
         var cart = await _context.Carts
             .Include(c => c.Items)
-            .Where(c => c.CustomerId == request.CustomerId && c.IsDeleted == false)
-            .FirstOrDefaultAsync(cancellationToken);
+            .FirstOrDefaultAsync(c => c.CustomerId == request.CustomerId, cancellationToken);
 
         string? restaurantId = null;
 
