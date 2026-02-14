@@ -101,7 +101,7 @@ public class AddItemToCartCommandHandler : IRequestHandler<AddItemToCartCommand,
                 await _publishEndpoint.Publish(
                     new CartCreatedEvent
                     {
-                        Id = cartId,
+                        CustomerId = request.CustomerId,
                         ItemsIds = cart.Items.Select(i => i.Id).ToArray(),
                         CreatedOnUtc = DateTime.UtcNow
                     },
@@ -122,7 +122,7 @@ public class AddItemToCartCommandHandler : IRequestHandler<AddItemToCartCommand,
 
                 var cartUpdatedEvent = new CartUpdatedEvent
                 {
-                    Id = cart.Id,
+                    CustomerId =  request.CustomerId,
                     Source = "AddItemToCart",
                     UpdatedOnUtc = DateTime.UtcNow
                 };
@@ -148,7 +148,7 @@ public class AddItemToCartCommandHandler : IRequestHandler<AddItemToCartCommand,
                     if (existingItem is not null)
                     {
                         int finalStock = existingItem.Quantity + item.Quantity;
-                        if (finalStock > food.Stock)
+                        if (item.Quantity > food.Stock)
                         {
                             throw new Exception($"Stock {food.Stock} is less than {finalStock}");
                         }

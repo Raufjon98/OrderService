@@ -44,7 +44,7 @@ public class RemoveFromCartCommandHandler : IRequestHandler<RemoveItemFromCartCo
 
         var cartUpdateEvent = new CartUpdatedEvent
         {
-            Id = cart.Id,
+            CustomerId = request.CustomerId,
             UpdatedOnUtc = DateTime.UtcNow,
             Source = "RemoveItems"
         };
@@ -86,7 +86,7 @@ public class RemoveFromCartCommandHandler : IRequestHandler<RemoveItemFromCartCo
             await _publishEndpoint.Publish(
                 new CartRemovedEvent
                 {
-                    Id = cart.Id,
+                    CustomerId = request.CustomerId,
                     RemovedOnUtc = DateTime.UtcNow
                 },
                 cancellationToken);

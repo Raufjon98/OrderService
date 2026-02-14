@@ -40,7 +40,7 @@ public class CreateOrderHandler : IRequestHandler<CreateOrderCommand, OrderRespo
             .Include(c => c.Items)
             .FirstOrDefaultAsync(c => c.CustomerId == request.CustomerId, cancellationToken);
         
-        if (cart is null || !cart.Items.Any())
+        if (cart is null)
         {
             throw new Exception("Your cart is empty!");
         }
@@ -93,13 +93,13 @@ public class CreateOrderHandler : IRequestHandler<CreateOrderCommand, OrderRespo
 
             order.Status = OrderStatus.Confirmed;
             order.ModifiedAt = DateTime.UtcNow;
-            _context.Carts.Remove(cart);
+            cart.IsDeleted = true;
             await _context.SaveChangesAsync(cancellationToken);
 
             await _publishEndpoint.Publish(
                 new CartRemovedEvent()
                 {
-                    Id = cart.Id,
+                    CustomerId = request.CustomerId,
                     RemovedOnUtc = DateTime.UtcNow
                 },
                 
@@ -108,10 +108,9 @@ public class CreateOrderHandler : IRequestHandler<CreateOrderCommand, OrderRespo
             await _publishEndpoint.Publish(
                 new OrderCreatedEvent
                 {
-                    Id = order.Id,
-                    CustomerId = order.CustomerId,
+                    CustomerId = cart.CustomerId,
+                    Id = orderId,
                     CreatedOnUtc = DateTime.UtcNow,
-                    ItemsIds = order.Items.Select(i => i.Id).ToList(),
                 },
                 cancellationToken);
 

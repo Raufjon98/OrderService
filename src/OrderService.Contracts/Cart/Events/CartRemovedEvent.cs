@@ -2,6 +2,6 @@ namespace OrderService.Contracts.Cart.Events;
 
 public record CartRemovedEvent
 {
-    public Guid Id { get; init; }
+    public Guid CustomerId { get; init; }
     public DateTime RemovedOnUtc { get; set; }
 }
