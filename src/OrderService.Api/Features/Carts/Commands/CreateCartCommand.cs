@@ -110,8 +110,7 @@ public class CreateCartCommandHandler : IRequestHandler<CreateCartCommand, CartR
             await _publishEndpoint.Publish(
                 new CartCreatedEvent
                 {
-                    Id = cart.Id,
-                    ItemsIds =  cart.Items.Select(i => i.Id).ToArray(),
+                    CustomerId = request.CustomerId,
                     CreatedOnUtc = DateTime.UtcNow,
                 },
                 cancellationToken);

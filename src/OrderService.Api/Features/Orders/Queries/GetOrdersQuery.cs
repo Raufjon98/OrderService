@@ -70,6 +70,7 @@ public class GetOrdersQueryHandler : IRequestHandler<GetOrdersQuery, List<OrderR
                 }).ToList()
             }).ToListAsync(cancellationToken);
         
+        
         return orders;
     }
 }

@@ -36,7 +36,9 @@ public class CancelOrderCommandHandler : IRequestHandler<CancelOrderCommand, Ord
 
     public async Task<OrderResponse> Handle(CancelOrderCommand request, CancellationToken cancellationToken)
     {
-        var order = await _context.Orders.FirstOrDefaultAsync(o => o.Id == request.OrderId, cancellationToken);
+        var order = await _context.Orders
+            .Include(o => o.Items)
+            .FirstOrDefaultAsync(o => o.Id == request.OrderId, cancellationToken);
         if (order == null)
         {
             throw new NotFoundException(nameof(Order), request.OrderId.ToString());
@@ -60,7 +62,6 @@ public class CancelOrderCommandHandler : IRequestHandler<CancelOrderCommand, Ord
                 {
                     Id = order.Id,
                     UpdatedOnUtc = DateTime.UtcNow,
-                    Items = order.Items.ToDictionary(i=>i.FoodId, i=>i.Quantity),
                     Source = "CancelOrder",
                     OrderStatus = order.Status
                 },
