@@ -1,11 +1,13 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using OrderService.Api.Domain.Entities;
+using OrderService.Api.Features.Common.Exceptions;
 using OrderService.Api.Infrastructure.Data;
 using OrderService.Contracts.Enums;
 
 namespace OrderService.Api.Features.Orders.Queries;
 
-public record GetOrderStatusQuery(Guid CustomerId,Guid OrderId) : IRequest<OrderStatus>;
+public record GetOrderStatusQuery(Guid CustomerId, Guid OrderId) : IRequest<OrderStatus>;
 
 public class GetOrderStatusQueryHandler : IRequestHandler<GetOrderStatusQuery, OrderStatus>
 {
@@ -18,10 +20,15 @@ public class GetOrderStatusQueryHandler : IRequestHandler<GetOrderStatusQuery, O
     
     public async Task<OrderStatus> Handle(GetOrderStatusQuery request, CancellationToken cancellationToken)
     {
-        var orderStatus = await _context.Orders
+        var order = await _context.Orders
             .Where(o => o.Id == request.OrderId && o.CustomerId == request.CustomerId)
-            .Select(o=> o.Status)
             .FirstOrDefaultAsync(cancellationToken);
-        return orderStatus;
+        
+        if (order == null )
+        {
+            throw new NotFoundException(nameof(Order), request.OrderId.ToString());
+        }
+        
+        return order.Status;
     }
 }
