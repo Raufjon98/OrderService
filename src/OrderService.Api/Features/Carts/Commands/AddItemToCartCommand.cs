@@ -197,10 +197,10 @@ public class AddItemToCartCommandHandler : IRequestHandler<AddItemToCartCommand,
            
             await transaction.CommitAsync(cancellationToken);
         }
-        catch (Exception e)
+        catch (Exception)
         {
             await transaction.RollbackAsync(cancellationToken);
-            throw new Exception("Error while adding to cart", e);
+            throw;
         }
 
         return new CartResponse

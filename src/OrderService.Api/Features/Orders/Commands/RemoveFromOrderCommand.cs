@@ -67,7 +67,7 @@ public class RemoveFromOrderCommandHandler : IRequestHandler<RemoveFromOrderComm
                 var existingItem = order.Items.FirstOrDefault(i => i.FoodId == item.FoodId);
                 if (existingItem is null)
                 {
-                    throw new Exception("Order doesn't contain any item");
+                    throw new Exception($"Order doesn't contains item with key:{item.FoodId}");
                 }
 
                 if (existingItem.Quantity < item.Quantity)

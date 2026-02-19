@@ -35,7 +35,7 @@ public class MarkasReadyCommandHandler : IRequestHandler<MarkAsReadyCommand, Ord
 
         if (order.Status != OrderStatus.Preparing)
         {
-            throw new Exception("Only preparing orders can be supported!");
+            throw new Exception("Only preparing orders can be support!");
         }
         
         order.Status = OrderStatus.Ready;

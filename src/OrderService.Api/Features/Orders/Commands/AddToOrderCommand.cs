@@ -144,7 +144,7 @@ public class AddToOrderCommandHandler : IRequestHandler<AddToOrderCommand, Order
         catch 
         {
             await transaction.RollbackAsync(cancellationToken);
-            throw new Exception("An error occured while adding item to the order");
+            throw;
         }
 
         return new OrderResponse
