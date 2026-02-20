@@ -39,7 +39,7 @@ public class CreateOrderHandler : IRequestHandler<CreateOrderCommand, OrderRespo
         var cart = await _context.Carts
             .Include(c => c.Items)
             .FirstOrDefaultAsync(c => c.CustomerId == request.CustomerId, cancellationToken);
-        
+
         if (cart is null)
         {
             throw new Exception("Your cart is empty!");
@@ -68,7 +68,7 @@ public class CreateOrderHandler : IRequestHandler<CreateOrderCommand, OrderRespo
             Id = orderId,
             OrderNumber = Guid.NewGuid(),
             CustomerId = cart.CustomerId,
-            Status = OrderStatus.Pending,
+            Status = OrderStatus.PendingPayment,
             Items = cart.Items.Select(i => new OrderItem
                 {
                     OrderId = orderId,
@@ -79,48 +79,33 @@ public class CreateOrderHandler : IRequestHandler<CreateOrderCommand, OrderRespo
             ).ToList()
         };
 
-        await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+        await _context.Orders.AddAsync(order, cancellationToken);
+        cart.IsDeleted = true;
+        await _context.SaveChangesAsync(cancellationToken);
 
-        try
+        await _accountService.WithdrawBalanceAsync(new WithdrawRequest
         {
-            await _context.Orders.AddAsync(order, cancellationToken);
-            await _accountService.WithdrawBalanceAsync(new WithdrawRequest
+            SourceId = orderId.ToString(),
+            CustomerId = cart.CustomerId,
+            Amount = order.TotalAmount
+        });
+
+        await _publishEndpoint.Publish(
+            new CartRemovedEvent()
             {
-                SourceId = orderId.ToString(),
+                CustomerId = request.CustomerId,
+                RemovedOnUtc = DateTime.UtcNow
+            },
+            cancellationToken);
+
+        await _publishEndpoint.Publish(
+            new OrderCreatedEvent
+            {
                 CustomerId = cart.CustomerId,
-                Amount = order.TotalAmount
-            });
-
-            order.Status = OrderStatus.Confirmed;
-            order.ModifiedAt = DateTime.UtcNow;
-            cart.IsDeleted = true;
-            await _context.SaveChangesAsync(cancellationToken);
-
-            await _publishEndpoint.Publish(
-                new CartRemovedEvent()
-                {
-                    CustomerId = request.CustomerId,
-                    RemovedOnUtc = DateTime.UtcNow
-                },
-                
-                cancellationToken);
-            
-            await _publishEndpoint.Publish(
-                new OrderCreatedEvent
-                {
-                    CustomerId = cart.CustomerId,
-                    Id = orderId,
-                    CreatedOnUtc = DateTime.UtcNow,
-                },
-                cancellationToken);
-
-            await transaction.CommitAsync(cancellationToken);
-        }
-        catch
-        {
-            await transaction.RollbackAsync(cancellationToken);
-            throw new Exception("Failed to create order!");
-        }
+                Id = orderId,
+                CreatedOnUtc = DateTime.UtcNow,
+            },
+            cancellationToken);
 
         return new OrderResponse()
         {

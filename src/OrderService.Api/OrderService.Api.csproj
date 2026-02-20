@@ -9,6 +9,8 @@
   <ItemGroup>
     <PackageReference Include="CatalogService.Contracts" Version="1.0.6" />
     <PackageReference Include="CustomerService.Contracts" Version="1.0.2" />
+    <PackageReference Include="Hangfire.AspNetCore" Version="1.8.23" />
+    <PackageReference Include="Hangfire.PostgreSql" Version="1.21.1" />
     <PackageReference Include="MagicOnion.Server" Version="7.0.9" />
     <PackageReference Include="MassTransit" Version="8" />
     <PackageReference Include="MassTransit.RabbitMQ" Version="8" />
@@ -21,7 +23,7 @@
     </PackageReference>
     <PackageReference Include="Npgsql" Version="10.0.1" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.0" />
-    <PackageReference Include="PaymentService.Contracts" Version="1.0.4" />
+    <PackageReference Include="PaymentService.Contracts" Version="1.0.8" />
     <PackageReference Include="UUID.Serialization.MessagePack" Version="1.1.1" />
   </ItemGroup>
 

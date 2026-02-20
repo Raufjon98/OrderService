@@ -1,9 +1,13 @@
 using System.Reflection;
 using CatalogService.Contracts.Extensions;
 using CustomerService.Contracts.Extensions;
+using Hangfire;
+using Hangfire.PostgreSql;
 using MassTransit;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.EntityFrameworkCore;
+using OrderService.Api.Features.Jobs;
+using OrderService.Api.Infrastructure.Consumers.Transactions;
 using OrderService.Api.Infrastructure.Data;
 using OrderService.Api.Infrastructure.Interceptors;
 using OrderService.Api.MagicOnion.Services;
@@ -28,6 +32,7 @@ if (!builder.Environment.IsEnvironment("IntegrationTest"))
 {
     builder.Services.AddMassTransit(configuration =>
     {
+        configuration.AddConsumer<WithdrawBalanceConsumer>();
         configuration.UsingRabbitMq((ctx, cfg) =>
         {
             cfg.Host(rabbitConnectionString);
@@ -50,6 +55,12 @@ builder.Services.AddGrpc(options =>
     options.Interceptors.Add<ExceptionInterceptor>();
 });
 builder.Services.AddMagicOnion();
+builder.Services.AddHangfire(cfg => cfg
+    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+    .UseSimpleAssemblyNameTypeSerializer()
+    .UseRecommendedSerializerSettings()
+    .UsePostgreSqlStorage(options => options.UseNpgsqlConnection(connectionString)));
+builder.Services.AddHangfireServer();
 
 var app = builder.Build();
 
@@ -59,6 +70,21 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseHangfireDashboard("/hangfire", 
+    new DashboardOptions
+    {
+        DashboardTitle = "Hangfire Dashboard", TimeZoneResolver = new DefaultTimeZoneResolver()
+    });
+
+RecurringJob.AddOrUpdate<ExpiredCartsCleanUpJob>(
+    "CleanExpiredCarts",
+    x => x.RemoveExpiredCartsAsync(CancellationToken.None),
+    Cron.Weekly(DayOfWeek.Sunday), new RecurringJobOptions { TimeZone = TimeZoneInfo.Local });
+RecurringJob.AddOrUpdate<ExpiredOrdersCleanUpJob>(
+    "CleanExpiredOrders",
+    x => x.RemoveExpiredOrdersAsync(CancellationToken.None),
+    Cron.Weekly(DayOfWeek.Sunday), new RecurringJobOptions { TimeZone = TimeZoneInfo.Local });
 
 app.MapGet("/", () => "OrderService Api");
 app.MapMagicOnionService();

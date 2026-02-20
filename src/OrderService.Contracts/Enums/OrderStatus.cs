@@ -2,6 +2,7 @@ namespace OrderService.Contracts.Enums;
 
 public enum OrderStatus
 {
+    PendingPayment = 0,
     Pending = 1,
     Confirmed = 2,
     Preparing = 3,
