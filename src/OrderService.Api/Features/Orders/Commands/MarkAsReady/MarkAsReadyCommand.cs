@@ -5,41 +5,42 @@ using OrderService.Api.Domain.Entities;
 using OrderService.Api.Features.Common.Exceptions;
 using OrderService.Api.Infrastructure.Data;
 using OrderService.Contracts.Enums;
-using OrderService.Contracts.Interfaces;
 using OrderService.Contracts.Order.Events;
 using OrderService.Contracts.Order.Responses;
 using OrderService.Contracts.OrderItem.Responses;
-using EnvironmentName = Microsoft.AspNetCore.Hosting.EnvironmentName;
 
-namespace OrderService.Api.Features.Orders.Commands;
+namespace OrderService.Api.Features.Orders.Commands.MarkAsReady;
 
-public record CompleteOrderCommand(Guid OrderId) : IRequest <OrderResponse>;
+public record MarkAsReadyCommand (Guid OrderId) : IRequest<OrderResponse>;
 
-public class CompleteOrderCommandHandler : IRequestHandler<CompleteOrderCommand, OrderResponse>
+public class MarkasReadyCommandHandler : IRequestHandler<MarkAsReadyCommand, OrderResponse>
 {
     private readonly OrderDbContext _context;
     private readonly IPublishEndpoint _publishEndpoint;
 
-    public CompleteOrderCommandHandler(OrderDbContext context, IPublishEndpoint publishEndpoint)
+    public MarkasReadyCommandHandler(OrderDbContext context, IPublishEndpoint publishEndpoint)
     {
         _context = context;
         _publishEndpoint = publishEndpoint;
     }
-    public async Task<OrderResponse> Handle(CompleteOrderCommand request, CancellationToken cancellationToken)
+    
+    public async Task<OrderResponse> Handle(MarkAsReadyCommand request, CancellationToken cancellationToken)
     {
-        var order = await _context.Orders.FirstOrDefaultAsync(o=>o.Id == request.OrderId, cancellationToken);
+        var order = await _context.Orders
+            .Include(o=>o.Items)
+            .FirstOrDefaultAsync(o=> o.Id == request.OrderId, cancellationToken);
 
         if (order == null)
         {
             throw new NotFoundException(nameof(Order), request.OrderId.ToString());
         }
 
-        if (order.Status != OrderStatus.Ready)
+        if (order.Status != OrderStatus.Preparing)
         {
-            throw new Exception("Only Ready orders are supported!");
+            throw new Exception("Only preparing orders can be support!");
         }
         
-        order.Status = OrderStatus.Completed;
+        order.Status = OrderStatus.Ready;
         order.ModifiedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync(cancellationToken);
         
@@ -51,7 +52,7 @@ public class CompleteOrderCommandHandler : IRequestHandler<CompleteOrderCommand,
                 OrderStatusChangedOnUtc = DateTime.UtcNow
             },
             cancellationToken);
-        
+
         return new OrderResponse
         {
             Id = order.Id,
@@ -59,7 +60,7 @@ public class CompleteOrderCommandHandler : IRequestHandler<CompleteOrderCommand,
             OrderNumber = order.OrderNumber,
             Status = order.Status,
             OrderDate = order.CreatedAt,
-            Items = order.Items.Select(o=>  new OrderItemResponse
+            Items = order.Items.Select(o => new OrderItemResponse
             {
                 OrderId = o.OrderId,
                 FoodId = o.FoodId,

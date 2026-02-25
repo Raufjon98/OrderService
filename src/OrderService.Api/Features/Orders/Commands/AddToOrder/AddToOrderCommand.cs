@@ -14,7 +14,7 @@ using OrderService.Contracts.OrderItem.Responses;
 using PaymentService.Contracts.Account.Requests;
 using PaymentService.Contracts.Interfaces;
 
-namespace OrderService.Api.Features.Orders.Commands;
+namespace OrderService.Api.Features.Orders.Commands.AddToOrder;
 
 public record AddToOrderCommand(Guid CustomerId, AddToOrderRequest AddToOrderRequest) : IRequest<OrderResponse>;
 

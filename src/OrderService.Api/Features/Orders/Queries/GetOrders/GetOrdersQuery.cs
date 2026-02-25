@@ -6,7 +6,7 @@ using OrderService.Contracts.Enums;
 using OrderService.Contracts.Order.Responses;
 using OrderService.Contracts.OrderItem.Responses;
 
-namespace OrderService.Api.Features.Orders.Queries;
+namespace OrderService.Api.Features.Orders.Queries.GetOrders;
 
 public record GetOrdersQuery(
     Guid CustomerId,

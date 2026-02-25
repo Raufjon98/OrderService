@@ -5,7 +5,7 @@ using OrderService.Api.Features.Common.Exceptions;
 using OrderService.Api.Infrastructure.Data;
 using OrderService.Contracts.Enums;
 
-namespace OrderService.Api.Features.Orders.Queries;
+namespace OrderService.Api.Features.Orders.Queries.GetOrderStatus;
 
 public record GetOrderStatusQuery(Guid CustomerId, Guid OrderId) : IRequest<OrderStatus>;
 

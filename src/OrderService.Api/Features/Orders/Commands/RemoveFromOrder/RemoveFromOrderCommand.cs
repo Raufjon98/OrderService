@@ -16,7 +16,7 @@ using OrderService.Contracts.OrderItem.Responses;
 using PaymentService.Contracts.Account.Requests;
 using PaymentService.Contracts.Interfaces;
 
-namespace OrderService.Api.Features.Orders.Commands;
+namespace OrderService.Api.Features.Orders.Commands.RemoveFromOrder;
 
 public record RemoveFromOrderCommand(Guid CustomerId, RemoveFromOrderRequest RemoveFromOrderRequest) : IRequest<OrderResponse>;
 
@@ -96,7 +96,7 @@ public class RemoveFromOrderCommandHandler : IRequestHandler<RemoveFromOrderComm
             {
                 CustomerId = request.CustomerId,
                 Amount = amount,
-                SourceId = $"{order.OrderNumber} refund!"
+                SourceId = order.Id.ToString()
             };
             await _accountService.TopUpBalanceAsync(refund);
             
