@@ -1,11 +1,14 @@
 using System.Reflection;
 using CatalogService.Contracts.Extensions;
 using CustomerService.Contracts.Extensions;
+using FluentValidation;
 using Hangfire;
 using Hangfire.PostgreSql;
 using MassTransit;
+using MediatR;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.EntityFrameworkCore;
+using OrderService.Api.Features.Common.Behaviors;
 using OrderService.Api.Features.Jobs;
 using OrderService.Api.Infrastructure.Consumers.Transactions;
 using OrderService.Api.Infrastructure.Data;
@@ -61,6 +64,9 @@ builder.Services.AddHangfire(cfg => cfg
     .UseRecommendedSerializerSettings()
     .UsePostgreSqlStorage(options => options.UseNpgsqlConnection(connectionString)));
 builder.Services.AddHangfireServer();
+builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+builder.Services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
+
 
 var app = builder.Build();
 

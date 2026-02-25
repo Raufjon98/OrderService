@@ -1,12 +1,12 @@
 using MagicOnion;
 using MagicOnion.Server;
 using MediatR;
-using OrderService.Api.Features.Carts.Commands;
-using OrderService.Api.Features.Carts.Queries;
+using OrderService.Api.Features.Carts.Commands.AddItemToCart;
+using OrderService.Api.Features.Carts.Commands.CreateCart;
+using OrderService.Api.Features.Carts.Commands.RemoveItemFromCart;
+using OrderService.Api.Features.Carts.Queries.GetCart;
 using OrderService.Contracts.Cart.Requests;
 using OrderService.Contracts.Cart.Responses;
-using OrderService.Contracts.CartItem.Requests;
-using OrderService.Contracts.CartItem.Responses;
 using OrderService.Contracts.Interfaces;
 
 

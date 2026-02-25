@@ -13,7 +13,7 @@ using PaymentService.Contracts.Account.Requests;
 using PaymentService.Contracts.Interfaces;
 
 
-namespace OrderService.Api.Features.Orders.Commands;
+namespace OrderService.Api.Features.Orders.Commands.CreateOrder;
 
 public record CreateOrderCommand(Guid CustomerId) : IRequest<OrderResponse>;
 

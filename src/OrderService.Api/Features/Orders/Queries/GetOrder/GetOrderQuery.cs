@@ -6,7 +6,7 @@ using OrderService.Api.Infrastructure.Data;
 using OrderService.Contracts.Order.Responses;
 using OrderService.Contracts.OrderItem.Responses;
 
-namespace OrderService.Api.Features.Orders.Queries;
+namespace OrderService.Api.Features.Orders.Queries.GetOrder;
 
 public record GetOrderQuery(Guid CustomerId, Guid OrderId) : IRequest<OrderResponse>;
 

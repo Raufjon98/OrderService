@@ -13,7 +13,7 @@ using OrderService.Contracts.OrderItem.Responses;
 using PaymentService.Contracts.Account.Requests;
 using PaymentService.Contracts.Interfaces;
 
-namespace OrderService.Api.Features.Orders.Commands;
+namespace OrderService.Api.Features.Orders.Commands.CancelOrder;
 
 public record CancelOrderCommand(Guid CustomerId, Guid OrderId) : IRequest<OrderResponse>;
 
@@ -71,7 +71,7 @@ public class CancelOrderCommandHandler : IRequestHandler<CancelOrderCommand, Ord
             {
                 CustomerId = request.CustomerId,
                 Amount = order.TotalAmount,
-                SourceId = $"{order.OrderNumber} refund!"
+                SourceId = order.Id.ToString(),
             };
 
             await _accountService.TopUpBalanceAsync(refund);

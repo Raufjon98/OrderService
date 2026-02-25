@@ -6,7 +6,7 @@ using OrderService.Api.Infrastructure.Data;
 using OrderService.Contracts.Cart.Responses;
 using OrderService.Contracts.CartItem.Responses;
 
-namespace OrderService.Api.Features.Carts.Queries;
+namespace OrderService.Api.Features.Carts.Queries.GetCart;
 
 public record GetCartQuery(Guid CustomerId) : IRequest<CartResponse>;
 

@@ -32,7 +32,7 @@ public class WithdrawBalanceConsumer : IConsumer<WithdrawBalanceEvent>
             {
                 throw new NotFoundException(nameof(Order), context.Message.SourceId);
             }
-            order.Status = OrderStatus.Pending;
+            order.Status = OrderStatus.Confirmed;
             await _context.SaveChangesAsync();
         }
     }

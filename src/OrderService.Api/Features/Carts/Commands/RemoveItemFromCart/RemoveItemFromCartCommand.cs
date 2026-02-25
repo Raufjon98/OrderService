@@ -11,7 +11,7 @@ using OrderService.Contracts.Cart.Requests;
 using OrderService.Contracts.Cart.Responses;
 using OrderService.Contracts.CartItem.Responses;
 
-namespace OrderService.Api.Features.Carts.Commands;
+namespace OrderService.Api.Features.Carts.Commands.RemoveItemFromCart;
 
 public record RemoveItemFromCartCommand(Guid CustomerId, CartItemsRequest CartItems) : IRequest<CartResponse>;
 
